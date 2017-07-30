@@ -202,7 +202,7 @@ class CommandThread (threading.Thread):
 		if alreadyRunning:
 			self.logger.info("already running")
 			return
-		c = 'ssh -o ConnectTimeout=10 %(address)s "sudo nohup python3 scan.py --interface %(wlan)s --time %(scantime)d --group %(group)s --server %(server)s < /dev/null > std.out 2> std.err &"'
+		c = 'ssh -o ConnectTimeout=10 %(address)s "sudo nohup python3 scan.py --interface %(wlan)s --time %(scantime)d --server %(server)s < /dev/null > std.out 2> std.err &"'
 		r, code = run_command(
 			c % {'address': self.config['address'],
 				 'server': self.config['server'],
@@ -249,6 +249,7 @@ class CommandThread (threading.Thread):
 		self.logger.debug(code)
 		# upload scan.py
 		c = 'scp scan.py %(address)s:~/'
+		print(c % {'address': self.config['address'], 'server': self.config['server']})
 		r, code = run_command(
 			c % {'address': self.config['address'], 'server': self.config['server']})
 		self.logger.debug(r)

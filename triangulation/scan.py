@@ -15,9 +15,10 @@ logger = logging.getLogger('scan.py')
 
 import requests
 
-class scanner:
-	found_nodes = False
+# class scanner:
+# 	found_nodes = False
 
+found_nodes = False
 mac_num = hex(uuid.getnode()).replace('0x', '').upper()
 before_mac = '-'.join(mac_num[i : i + 2] for i in range(0, 11, 2))
 own_mac = before_mac.lower()
@@ -52,11 +53,11 @@ def num_wifi_cards():
 
 
 def process_scan(time_window, own_node):
-
+	global found_nodes
 	# print own_mac
 
 	other_nodes = []
-	if scanner.found_nodes == False:
+	if found_nodes == False:
 		route = url + '/init'
 		r = requests.get(route)
 		if len(r.json()) != 3:
@@ -113,13 +114,13 @@ def process_scan(time_window, own_node):
 		if str(mac) == own_mac:
 			print 'WOW YOU VIOLATED THE LAW'
 			continue
-		if str(mac) != "f0:d7:aa:7e:f9:0c":
-			continue
-		if scanner.found_nodes == False:
+		if found_nodes == False:
 			for node in other_nodes:
 				if mac != node['mac']:
 					# print node['mac']
 					continue
+		if str(mac) != "f0:d7:aa:7e:f9:0c":
+			continue
 		# print(mac)
 		# print(fingerprints[mac])
 		fingerprints2.append(
@@ -133,7 +134,7 @@ def process_scan(time_window, own_node):
 	# payload = {
 	# 	'rssis': fingerprints2}
 	# print phone_mac
-	if scanner.found_nodes == False:
+	if found_nodes == False:
 		if len(fingerprints3) == 2:
 			payload = {
 				'node': own_node,
@@ -275,8 +276,8 @@ def main(node_num):
 			payload = process_scan(args.time, node_num)
 			# payload['group'] = args.group
 			if payload != None:
-				if scanner.found_nodes == True:
-					print scanner.found_nodes
+				if found_nodes == True:
+					print found_nodes
 					r = requests.post(
 						args.server +
 						"/trilateration",
@@ -291,7 +292,7 @@ def main(node_num):
 							json=payload)
 					logger.debug(
 							"Sent to server with status code: " + str(r.status_code))
-					scanner.found_nodes = True
+					found_nodes = True
 			time.sleep(float(args.time))  # Wait before getting next window
 		except Exception:
 			logger.error("Fatal error in main loop", exc_info=True)
