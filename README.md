@@ -2,13 +2,14 @@
 
 # Loaf Triangulation
 
-# Table of Contents
+## Table of Contents
 
 * [Abstract](#abstract)
 * [Dependencies](#dependencies)
 * [Setup](#setup)
 * [Results](#results)
 * [Usage](#usage)
+* [Contributing](#Contributing)
 * [License](#license)
 
 ## Abstract
@@ -92,3 +93,7 @@ Unauthorized copying of this file, via any medium is strictly prohibited
 Proprietary and confidential
 Written by Loaf Triangulation team <hello@projectloaf.net>, July 2017
 ```
+
+### Contributing
+
+[Contribution guidelines for this project](CONTRIBUTING.md)
