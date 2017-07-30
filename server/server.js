@@ -17,6 +17,10 @@ app.get('/', function(req,res){
 	res.json({success: true, message: 'welcome to experiment: "Finding the location of a WiFi-enabled device through Raspberry Pi Trilateration"'});
 });
 
+app.get('/nodes',function(req,res){
+	res.json(nodes);
+});
+
 app.post('/', function(req, res){
 	nodes.push({
 		node: req.body.node,
@@ -75,6 +79,14 @@ app.get('/track', function(req,res){
 app.get('/init', function(req,res){
 	res.json(initNodes);
 	// res.json({length: initNodes.length});
+});
+
+app.get('/fake', function(req,res){
+	initNodes.push({
+		node: initNodes.length,
+		mac: 'ff:ff:ff:ff:ff:ff'
+	});
+	res.json(initNodes);
 });
 
 app.post('/init', function(req,res){
