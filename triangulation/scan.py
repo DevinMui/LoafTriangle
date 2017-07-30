@@ -93,7 +93,7 @@ def process_scan(time_window):
 			continue
 		if fingerprints[mac] == own_mac:
 			continue
-		if fingerprints[mac] != "F0:D7:AA:70:f9:0C" or fingerprints[mac] != "B0:70:2D:22:06:42":
+		if fingerprints[mac] != "F0:D7:AA:70:f9:0C":
 			continue
 		print(mac)
 		print(fingerprints[mac])
