@@ -38,11 +38,18 @@ app.post('/', function(req, res){
 	});
 	if(nodes.length>=3){
 		calcPos(nodes, function(datas){
+			nodes = datas;
+			console.log(nodes)
 			res.json(datas);
 		});
 	} else {
 		res.json(nodes);
 	}
+});
+
+app.get('/calculate', function(req,res){
+	let datas = calcPos(nodes);
+	res.json(datas);
 });
 
 app.get('/trilateration', function(req,res){
@@ -89,11 +96,58 @@ app.get('/init', function(req,res){
 });
 
 app.get('/fake', function(req,res){
-	initNodes.push({
-		node: initNodes.length,
-		mac: 'ff:ff:ff:ff:ff:ff'
-	});
-	res.json(initNodes);
+	let test = [
+	    {
+	        "node": 1,
+	        "mac": "b8:27:eb:c5:51:a0",
+	        "x": null,
+	        "y": null,
+	        "rssis": [
+	            {
+	                "rssi": -49,
+	                "mac": "b8:27:eb:ec:77:38"
+	            },
+	            {
+	                "rssi": -58,
+	                "mac": "b8:27:eb:6f:af:5f"
+	            }
+	        ]
+	    },
+	    {
+	        "node": 2,
+	        "mac": "b8:27:eb:6f:af:5f",
+	        "x": null,
+	        "y": null,
+	        "rssis": [
+	            {
+	                "rssi": -55,
+	                "mac": "b8:27:eb:c5:51:a0"
+	            },
+	            {
+	                "rssi": -48,
+	                "mac": "b8:27:eb:ec:77:38"
+	            }
+	        ]
+	    },
+	    {
+	        "node": 0,
+	        "mac": "b8:27:eb:ec:77:38",
+	        "x": null,
+	        "y": null,
+	        "rssis": [
+	            {
+	                "rssi": -56,
+	                "mac": "b8:27:eb:6f:af:5f"
+	            },
+	            {
+	                "rssi": -61,
+	                "mac": "b8:27:eb:c5:51:a0"
+	            }
+	        ]
+    	}
+    ];
+    nodes = test;
+	res.json(test);
 });
 
 app.post('/init', function(req,res){
@@ -111,37 +165,51 @@ app.get('/reset', function(req,res){
 	res.json({'success': true, message: 'resetted'});
 });
 
-function calcPos(nodes, callback){
-	nodes[0].x = 0;
-	nodes[0].y = 0;
-	let rssis = nodes[1].rssis;
-	for(rssi in rssis){
-		if(rssi.node===0){
-			nodes[1].x = calculateDistance(rssi.rssi);
+function calcPos(datas){	
+	datas[0].x = 0;
+	datas[0].y = 0;
+	let rssis = datas[1].rssis;
+	for(rssi of rssis){
+		rssi.distance = convertToFeet(calculateDistance(rssi.rssi));
+		for(node of datas){
+			if(node.node===0 && rssi.mac === node.mac){
+				datas[1].x = calculateDistance(rssi.rssi);
+				break;
+			}
 		}
 	}
-	nodes[1].y = 0;
-	let rssis = nodes[0].rssis;
+	datas[1].y = 0;
+	rssis = datas[0].rssis;
 	let k1;
 	let k2;
 	let k3;
-	for(rssi in rssis){
-		if(rssi.node===1){
-			k1 = calculateDistance(rssi.rssi);
-		} else {
-			k2 = calculateDistance(rssi.rssi);
+	for(rssi of rssis){
+		rssi.distance = convertToFeet(calculateDistance(rssi.rssi));
+		for(node of datas){
+			if(node.node===1 && rssi.mac === node.mac){
+				k1 = calculateDistance(rssi.rssi);
+			} else {
+				k2 = calculateDistance(rssi.rssi);
+			}
 		}
 	}
-	let rssis = nodes[1].rssis;
-	for(rssi in rssis){
-		if(rssi.node===2){
-			k3 = calculateDistance(rssi.rssi);
+	rssis = datas[1].rssis;
+	for(rssi of rssis){
+		rssi.distance = convertToFeet(calculateDistance(rssi.rssi));
+		for(node of datas){
+			if(node.node===2 && rssi.mac === node.mac){
+				k3 = calculateDistance(rssi.rssi);
+			}
 		}
+	}
+	rssis = datas[2].rssis;
+	for(rssi of rssis){
+		rssi.distance = convertToFeet(calculateDistance(rssi.rssi));
 	}
 	let c = Math.acos( (k1**2+k2**2-k3**2) / (2*k1*k2) );
-	nodes[2].x = k1*Math.sin(c);
-	nodes[2].y = k1*Math.cos(c);
-	callback(nodes);
+	datas[2].x = k1*Math.sin(c);
+	datas[2].y = k1*Math.cos(c);
+	return datas;
 }
 
 // copypastad from github (https://gist.github.com/kdzwinel/8235348): issues with same x coord
@@ -168,10 +236,14 @@ function getTrilateration(position1, position2, position3) {
 	};
 }
 
+function convertToFeet(meters){
+	return meters*3.28084
+}
+
 // https://gist.github.com/eklimcz/446b56c0cb9cfe61d575
 // rssi->meters
 function calculateDistance(rssi){
-	var txPower = -59; //hard coded power value. Usually ranges between -59 to -65
+	var txPower = -49; //hard coded power value. Usually ranges between -59 to -65
 	if (rssi === 0) {
 		return -1.0; 
 	}
@@ -183,6 +255,15 @@ function calculateDistance(rssi){
 		return distance;
 	}
 }
+
+// function calculateDistance(rssi,txPower){
+// 	if(!txPower){
+// 		txPower = -65;
+// 	}
+// 	var n = 2;
+// 	var d = 10 ** ((txPower - rssi) / (10*n));
+// 	return Math.pow(10*d, (txPower - rssi) / (10 * 2));	
+// }
 
 app.listen(3000, "0.0.0.0", function(){
 	console.log('Running on port 3000');
