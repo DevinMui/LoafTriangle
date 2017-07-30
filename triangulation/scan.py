@@ -15,16 +15,26 @@ logger = logging.getLogger('scan.py')
 
 import requests
 
-mac_num = hex(uuid.getnode()).replace('0x', '').upper()
-own_mac = '-'.join(mac_num[i : i + 2] for i in range(0, 11, 2))
+class scanner:
+	found_nodes = False
 
-url = 'http://192.168.1.8:3000/'
+mac_num = hex(uuid.getnode()).replace('0x', '').upper()
+before_mac = '-'.join(mac_num[i : i + 2] for i in range(0, 11, 2))
+own_mac = before_mac.lower()
+
+url = 'http://192.168.1.8:3000'
 
 
 def get_node_and_mac(num):
 
+	# TEMP
+	# r1 = requests.get('http://192.168.1.8:3000/reset')
+	# r2 = requests.get('http://192.168.1.8:3000/fake')
+	# r3 = requests.get('http://192.168.1.8:3000/fake')
+
 	payload = {'mac': own_mac}
-	r = requests.post(url + 'init', data=payload)
+	route = url + '/init'
+	r = requests.post(route, data=payload)
 	num = r.json()['length']
 
 def restart_wifi():
@@ -47,7 +57,19 @@ def num_wifi_cards():
 	return output.count("wlan")
 
 
-def process_scan(time_window):
+def process_scan(time_window, own_node):
+
+	# print own_mac
+
+	other_nodes = []
+	if scanner.found_nodes == False:
+		route = url + '/init'
+		r = requests.get(route)
+		if len(r.json()) != 3:
+			return
+		else:
+			for node in r.json():
+				other_nodes.append(node)
 
 	logger.debug("Reading files...")
 	output = ""
@@ -82,31 +104,59 @@ def process_scan(time_window):
 			if mac not in fingerprints:
 				fingerprints[mac] = []
 			fingerprints[mac].append(float(rssi))
+			# print mac
 		except:
 			pass
 	logger.debug("..done")
 
 	# Compute medians
+	fingerprints3 = []
 	fingerprints2 = []
 	for mac in fingerprints:
+		print mac
 		if len(fingerprints[mac]) == 0:
 			continue
-		if fingerprints[mac] == own_mac:
+		if str(mac) == own_mac:
+			print 'WOW YOU VIOLATED THE LAW'
 			continue
-		if fingerprints[mac] != "F0:D7:AA:70:f9:0C":
+		if str(mac) != "f0:d7:aa:7e:f9:0c":
 			continue
-		print(mac)
-		print(fingerprints[mac])
+		if scanner.found_nodes == False:
+			for node in other_nodes:
+				if mac != node['mac']:
+					# print node['mac']
+					continue
+		# print(mac)
+		# print(fingerprints[mac])
 		fingerprints2.append(
 			{"mac": mac, "rssi": int(statistics.median(fingerprints[mac]))})
+		fingerprints3.append(
+			{'rssi': int(statistics.median(fingerprints[mac]))})
 
 	logger.debug("Processed %d lines, found %d fingerprints in %d relevant lines" %
 				 (len(output.splitlines()), len(fingerprints2),relevant_lines))
 
-	payload = {
-		'rssis': fingerprints2}
-	logger.debug(payload)
-	return payload
+	# payload = {
+	# 	'rssis': fingerprints2}
+	# print phone_mac
+	if scanner.found_nodes == False:
+		if len(fingerprints3) == 2:
+			payload = {
+				'node': own_node,
+				'mac': own_mac,
+				'rssis': fingerprints3
+			}
+			print payload
+			return payload
+	elif len(fingerprints2) == 0:
+		return
+	else:
+		payload = {
+			'mac': fingerprints2[0]['mac'],
+			'rssi': fingerprints2[0]['rssi']
+		}
+		logger.debug(payload)
+		return payload
 
 
 def run_command(command):
@@ -144,7 +194,7 @@ def stop_scan():
 			logger.info("Stopped scan")
 
 
-def main(node):
+def main(node_num):
 
 	# Check if SUDO
 	# http://serverfault.com/questions/16767/check-admin-rights-inside-python-script
@@ -171,7 +221,7 @@ def main(node):
 	parser.add_argument(
 		"-t",
 		"--time",
-		default=3,
+		default=5,
 		help="scanning time in seconds (default 3)")
 	parser.add_argument(
 		"--single-wifi",
@@ -181,7 +231,7 @@ def main(node):
 	parser.add_argument(
 		"-s",
 		"--server",
-		default=url + "trilateration",
+		default=url,
 		help="send payload to this server")
 	parser.add_argument(
 		"-n",
@@ -199,8 +249,8 @@ def main(node):
 
 	# Check arguments for logging
 	loggingLevel = logging.DEBUG
-	if args.nodebug:
-		loggingLevel = logging.ERROR
+	# if args.nodebug:
+	# 	loggingLevel = logging.ERROR
 	logger.setLevel(loggingLevel)
 	fh = logging.FileHandler('scan.log')
 	fh.setLevel(loggingLevel)
@@ -228,15 +278,26 @@ def main(node):
 				restart_wifi()
 				logger.debug("Restarting WiFi in managed mode...")
 			start_scan(args.interface)
-			payload = process_scan(args.time)
-			payload['group'] = args.group
-			if len(payload['signals']) > 0:
-				r = requests.post(
-					args.server +
-					"/reversefingerprint",
-					json=payload)
-				logger.debug(
-					"Sent to server with status code: " + str(r.status_code))
+			payload = process_scan(args.time, node_num)
+			# payload['group'] = args.group
+			if payload != None:
+				if scanner.found_nodes == True:
+					print scanner.found_nodes
+					r = requests.post(
+						args.server +
+						"/trilateration",
+						json=payload)
+					logger.debug(
+						"Sent to server with status code: " + str(r.status_code))
+				else:
+					print payload
+					r = requests.post(
+							args.server +
+							"/",
+							json=payload)
+					logger.debug(
+							"Sent to server with status code: " + str(r.status_code))
+					scanner.found_nodes = True
 			time.sleep(float(args.time))  # Wait before getting next window
 		except Exception:
 			logger.error("Fatal error in main loop", exc_info=True)
