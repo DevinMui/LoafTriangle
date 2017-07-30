@@ -1,13 +1,19 @@
 let express = require('express');
 let bodyParser = require('body-parser');
+let logger = require('morgan');
 let app = express();
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-
+app.use(logger('dev'));
 
 let initNodes = [];
 let nodes = [];
 let nodeTrilateration = [];
+
+app.get('/', function(req,res){
+	res.json({success: true, message: 'welcome to experiment: "Finding the location of a WiFi-enabled device through Raspberry Pi Trilateration"'});
+});
 
 app.post('/', function(req, res){
 	nodes.push({
