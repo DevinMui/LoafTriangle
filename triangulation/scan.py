@@ -12,27 +12,20 @@ import atexit
 from multiprocessing import Process, Value, Manager
 from uuid import getnode as get_mac
 logger = logging.getLogger('scan.py')
-
 import requests
 
-# class scanner:
-# 	found_nodes = False
-
 found_nodes = False
+
 omac = get_mac()
 owmac = ':'.join(("%012X" % omac)[i:i+2] for i in range(0, 12, 2))
 own_mac = owmac.lower()
-
-# print own_mac
-
 url = 'http://192.168.1.8:3000'
 
-
-def get_node_and_mac(num):
+def get_node_and_mac():
 	payload = {'mac': own_mac}
 	route = url + '/init'
 	r = requests.post(route, data=payload)
-	num = r.json()['length']
+	return r.json()['length']
 
 def restart_wifi():
 	os.system("/sbin/ifdown --force wlan0")
@@ -56,9 +49,9 @@ def num_wifi_cards():
 
 def process_scan(time_window, own_node):
 	global found_nodes
-	# print own_mac
 
 	other_nodes = []
+	print found_nodes
 	if found_nodes == False:
 		route = url + '/init'
 		r = requests.get(route)
@@ -89,8 +82,9 @@ def process_scan(time_window, own_node):
 	for line in output.splitlines():
 		try:
 			timestamp, mac, mac2, power_levels = line.split("\t")
-
+			print mac
 			if mac == mac2 or float(timestamp) < timestamp_threshold or len(mac) == 0:
+				print float(timestamp) < timestamp_threshold
 				continue
 			
 			relevant_lines+=1
@@ -101,51 +95,30 @@ def process_scan(time_window, own_node):
 			if mac not in fingerprints:
 				fingerprints[mac] = []
 			fingerprints[mac].append(float(rssi))
-			# print mac
 		except:
+			print "pass"
 			pass
 	logger.debug("..done")
 
 	# Compute medians
-	# fingerprints3 = []
 	fingerprints2 = []
 
 	for mac in fingerprints:
-		# print mac
 		if len(fingerprints[mac]) == 0:
 			continue
 		if str(mac) == own_mac:
 			print 'WOW YOU VIOLATED THE LAW'
 			continue
-		# if found_nodes == False:
-		# 	for node in other_nodes:
-		# 		if mac != node['mac']:
-		# 			# print node['mac']
-		# 			continue
 		else:
 			if str(mac) != "f0:d7:aa:7e:f9:0c":
 				continue
 		print mac
 		fingerprints2.append(
 			{"mac": mac, "rssi": int(statistics.median(fingerprints[mac]))})
-		# fingerprints3.append(
-		# 	{'rssi': int(statistics.median(fingerprints[mac]))})
 
 	logger.debug("Processed %d lines, found %d fingerprints in %d relevant lines" %
 				 (len(output.splitlines()), len(fingerprints2),relevant_lines))
 
-	# payload = {
-	# 	'rssis': fingerprints2}
-	# print phone_mac
-	# if found_nodes == False:
-	# 	if len(fingerprints3) == 2:
-	# 		payload = {
-	# 			'node': own_node,
-	# 			'mac': own_mac,
-	# 			'rssis': fingerprints3
-	# 		}
-	# 		# print payload
-	# 		return payload
 	if len(fingerprints2) == 0:
 		return
 	else:
@@ -154,9 +127,10 @@ def process_scan(time_window, own_node):
 			'rssi': fingerprints2[0]['rssi']
 		}
 		logger.debug(payload)
-		return payload
+		# return payload
+		return
 
-def init(time_window, own_node):
+def init(time_window, own_node, args):
 	other_nodes = []
 	payload = None
 	while(True):
@@ -186,8 +160,9 @@ def init(time_window, own_node):
 		for line in output.splitlines():
 			try:
 				timestamp, mac, mac2, power_levels = line.split("\t")
-
 				if mac == mac2 or float(timestamp) < timestamp_threshold or len(mac) == 0:
+					print mac
+					print float(timestamp) < timestamp_threshold
 					continue
 				
 				relevant_lines+=1
@@ -198,7 +173,7 @@ def init(time_window, own_node):
 				if mac not in fingerprints:
 					fingerprints[mac] = []
 				fingerprints[mac].append(float(rssi))
-				# print mac
+				logger.debug(mac)
 			except:
 				pass
 		logger.debug("..done")
@@ -206,8 +181,9 @@ def init(time_window, own_node):
 		# Compute medians
 		fingerprints2 = []
 
+		print fingerprints
+
 		for mac in fingerprints:
-			# print mac
 			if len(fingerprints[mac]) == 0:
 				continue
 			if str(mac) == own_mac:
@@ -217,24 +193,27 @@ def init(time_window, own_node):
 				for node in other_nodes:
 					if mac != node['mac']:
 						continue
-			print mac
 			fingerprints2.append(
-				{"rssi": int(statistics.median(fingerprints[mac]))})
+				{
+					"rssi": int(statistics.median(fingerprints[mac])),
+					"mac": mac
+				})
 
 		logger.debug("Processed %d lines, found %d fingerprints in %d relevant lines" %
 					 (len(output.splitlines()), len(fingerprints2),relevant_lines))
 
 		if len(fingerprints2) == 2:
 			payload = {
-				'node': own_node,
-				'mac': own_mac,
-				'rssis': fingerprints2
+				"node": own_node,
+				"mac": own_mac,
+				"rssis": fingerprints2
 			}
 
 		if len(r.json()) != 3 and payload:
 			break
+		time.sleep(float(time_window))
 		
-
+	print payload
 	r = requests.post(
 		args.server +
 		"/",
@@ -326,11 +305,6 @@ def main(node_num):
 	# parser.add_argument("-n", "--nodebug", action="store_true")
 	args = parser.parse_args()
 
-	# Check arguments for group
-	# if args.group == "":
-	# 	print("Must specify group with -g")
-	# 	sys.exit(-1)
-
 	# Check arguments for logging
 	loggingLevel = logging.DEBUG
 	# if args.nodebug:
@@ -350,20 +324,17 @@ def main(node_num):
 	# Startup scanning
 	print("Using server " + args.server)
 	logger.debug("Using server " + args.server)
-	print("Using group " + args.group)
-	logger.debug("Using group " + args.group)
-	init(args.time, node_num) # initialization with loaf server
+	start_scan(args.interface)
+	init(args.time, node_num, args) # initialization with loaf server
 	while True:
 		try:
-			if args.single_wifi:
-				logger.debug("Stopping scan...")
-				stop_scan()
-				logger.debug("Stopping monitor mode...")
-				restart_wifi()
-				logger.debug("Restarting WiFi in managed mode...")
-			start_scan(args.interface)
+			# if args.single_wifi:
+			# 	logger.debug("Stopping scan...")
+			# 	stop_scan()
+			# 	logger.debug("Stopping monitor mode...")
+			# 	restart_wifi()
+			# 	logger.debug("Restarting WiFi in managed mode...")
 			payload = process_scan(args.time, node_num)
-			# payload['group'] = args.group
 			if payload != None:
 				r = requests.post(
 					args.server +
@@ -378,16 +349,9 @@ def main(node_num):
 
 
 def exit_handler():
-	# print("Exiting...stopping scan..")
 	os.system("pkill -9 tshark")
 
 if __name__ == "__main__":
-
-	node_number = Value('i', 0)
-
-	p = Process(target=get_node_and_mac, args=(node_number,))
-	p.start()
-	p.join()
-
+	node_number = get_node_and_mac()
 	atexit.register(exit_handler)
 	main(node_number)

@@ -1,20 +1,27 @@
 let express = require('express');
+var path = require('path');
+let ejs = require('ejs');
 let bodyParser = require('body-parser');
 let logger = require('morgan');
-var pretty = require('express-prettify');
+let pretty = require('express-prettify');
 let app = express();
 
 app.use(pretty({ query: 'pretty' }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(logger('dev'));
+app.use(express.static(path.join(__dirname, 'public')));
+app.set('views', path.join(__dirname, 'views'));
+app.set('view cache', true);
+app.set('view engine', 'ejs');
 
 let initNodes = [];
 let nodes = [];
 let nodeTrilateration = [];
 
 app.get('/', function(req,res){
-	res.json({success: true, message: 'welcome to experiment: "Finding the location of a WiFi-enabled device through Raspberry Pi Trilateration"'});
+	// res.json({success: true, message: 'welcome to experiment: "Finding the location of a WiFi-enabled device through Raspberry Pi Trilateration"'});
+	res.render('index');
 });
 
 app.get('/nodes',function(req,res){
