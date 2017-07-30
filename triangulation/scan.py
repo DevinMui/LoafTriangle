@@ -18,11 +18,13 @@ import requests
 mac_num = hex(uuid.getnode()).replace('0x', '').upper()
 own_mac = '-'.join(mac_num[i : i + 2] for i in range(0, 11, 2))
 
+url = 'http://192.168.1.8:3000/'
+
 
 def get_node_and_mac(num):
 
 	payload = {'mac': own_mac}
-	r = requests.post('http://192.168.1.8:3000/init', data=payload)
+	r = requests.post(url + 'init', data=payload)
 	num = r.json()['length']
 
 def restart_wifi():
@@ -45,7 +47,7 @@ def num_wifi_cards():
 	return output.count("wlan")
 
 
-def process_scan(time_window, own_mac):
+def process_scan(time_window):
 
 	logger.debug("Reading files...")
 	output = ""
@@ -91,6 +93,8 @@ def process_scan(time_window, own_mac):
 			continue
 		if fingerprints[mac] == own_mac:
 			continue
+		if fingerprints[mac] != "F0:D7:AA:70:f9:0C" or fingerprints[mac] != "B0:70:2D:22:06:42":
+			continue
 		print(mac)
 		print(fingerprints[mac])
 		fingerprints2.append(
@@ -100,10 +104,7 @@ def process_scan(time_window, own_mac):
 				 (len(output.splitlines()), len(fingerprints2),relevant_lines))
 
 	payload = {
-		"node": socket.gethostname(),
-		"signals": fingerprints2,
-		"timestamp": int(
-			time.time())}
+		'rssis': fingerprints2}
 	logger.debug(payload)
 	return payload
 
@@ -180,7 +181,7 @@ def main(node):
 	parser.add_argument(
 		"-s",
 		"--server",
-		default="",
+		default=url + "trilateration",
 		help="send payload to this server")
 	parser.add_argument(
 		"-n",
