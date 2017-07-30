@@ -7,6 +7,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 
 let initNodes = [];
 let nodes = [];
+let nodeTrilateration = [];
 
 app.post('/', function(req, res){
 	nodes.push({
@@ -23,6 +24,20 @@ app.post('/', function(req, res){
 	} else {
 		res.json(nodes)
 	}
+});
+
+app.post('/trilateration', function(req,res){
+	var exists = false;
+	for(var i=0;i<nodeTrilateration.length;i++){
+		if(nodeTrilateration[i].mac===req.body.mac){
+			nodeTrilateration[i] = req.body;
+			exists = true;
+		}
+	}
+	if(!exists){
+		nodeTrilateration.push(req.body);
+	}
+	res.json(nodeTrilateration);
 });
 
 app.post('/track', function(req,res){
@@ -54,7 +69,7 @@ function calcPos(nodes, callback){
 	let rssis = nodes[1].rssis;
 	for(rssi in rssis){
 		if(rssi.node===0){
-			nodes[1].x = rssi.rssi;
+			nodes[1].x = calculateDistance(rssi.rssi);
 		}
 	}
 	nodes[1].y = 0;
@@ -64,15 +79,15 @@ function calcPos(nodes, callback){
 	let k3;
 	for(rssi in rssis){
 		if(rssi.node===1){
-			k1 = rssi.rssi;
+			k1 = calculateDistance(rssi.rssi);
 		} else {
-			k2 = rssi.rssi;
+			k2 = calculateDistance(rssi.rssi);
 		}
 	}
 	let rssis = nodes[1].rssis;
 	for(rssi in rssis){
 		if(rssi.node===2){
-			k3 = rssi.rssi;
+			k3 = calculateDistance(rssi.rssi);
 		}
 	}
 	let c = Math.acos( (k1**2+k2**2-k3**2) / (2*k1*k2) );
@@ -90,9 +105,9 @@ function getTrilateration(position1, position2, position3) {
 	var yb = position2.y;
 	var xc = position3.x;
 	var yc = position3.y;
-	var ra = position1.rssi;
-	var rb = position2.rssi;
-	var rc = position3.rssi;
+	var ra = calculateDistance(position1.rssi);
+	var rb = calculateDistance(position2.rssi);
+	var rc = calculateDistance(position3.rssi);
 
 	var S = (Math.pow(xc, 2.) - Math.pow(xb, 2.) + Math.pow(yc, 2.) - Math.pow(yb, 2.) + Math.pow(rb, 2.) - Math.pow(rc, 2.)) / 2.0;
 	var T = (Math.pow(xa, 2.) - Math.pow(xb, 2.) + Math.pow(ya, 2.) - Math.pow(yb, 2.) + Math.pow(rb, 2.) - Math.pow(ra, 2.)) / 2.0;
@@ -103,6 +118,22 @@ function getTrilateration(position1, position2, position3) {
 		x: x,
 		y: y
 	};
+}
+
+// https://gist.github.com/eklimcz/446b56c0cb9cfe61d575
+// rssi->meters
+function calculateDistance(rssi){
+	var txPower = -59; //hard coded power value. Usually ranges between -59 to -65
+	if (rssi === 0) {
+		return -1.0; 
+	}
+	var ratio = rssi*1.0/txPower;
+	if (ratio < 1.0) {
+		return Math.pow(ratio,10);
+	} else {
+		var distance =  (0.89976)*Math.pow(ratio,7.7095) + 0.111;    
+		return distance;
+	}
 }
 
 app.listen(3000, "0.0.0.0", function(){
