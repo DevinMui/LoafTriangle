@@ -9,9 +9,21 @@ import argparse
 import logging
 import statistics
 import atexit
+import uuid
+from multiprocessing import Process, Value, Manager
 logger = logging.getLogger('scan.py')
 
 import requests
+
+mac_num = hex(uuid.getnode()).replace('0x', '').upper()
+own_mac = '-'.join(mac_num[i : i + 2] for i in range(0, 11, 2))
+
+
+def get_node_and_mac(num):
+
+	payload = {'mac': own_mac}
+	r = requests.post('http://192.168.1.8:3000/init', data=payload)
+	num = r.json()['length']
 
 def restart_wifi():
 	os.system("/sbin/ifdown --force wlan0")
@@ -33,7 +45,8 @@ def num_wifi_cards():
 	return output.count("wlan")
 
 
-def process_scan(time_window):
+def process_scan(time_window, own_mac):
+
 	logger.debug("Reading files...")
 	output = ""
 	maxFileNumber = -1
@@ -75,6 +88,8 @@ def process_scan(time_window):
 	fingerprints2 = []
 	for mac in fingerprints:
 		if len(fingerprints[mac]) == 0:
+			continue
+		if fingerprints[mac] == own_mac:
 			continue
 		print(mac)
 		print(fingerprints[mac])
@@ -128,7 +143,8 @@ def stop_scan():
 			logger.info("Stopped scan")
 
 
-def main():
+def main(node):
+
 	# Check if SUDO
 	# http://serverfault.com/questions/16767/check-admin-rights-inside-python-script
 	if os.getuid() != 0:
@@ -154,8 +170,8 @@ def main():
 	parser.add_argument(
 		"-t",
 		"--time",
-		default=10,
-		help="scanning time in seconds (default 10)")
+		default=3,
+		help="scanning time in seconds (default 3)")
 	parser.add_argument(
 		"--single-wifi",
 		default=default_single_wifi,
@@ -164,7 +180,7 @@ def main():
 	parser.add_argument(
 		"-s",
 		"--server",
-		default="https://lf.internalpositioning.com",
+		default="",
 		help="send payload to this server")
 	parser.add_argument(
 		"-n",
@@ -176,9 +192,9 @@ def main():
 	args = parser.parse_args()
 
 	# Check arguments for group
-	if args.group == "":
-		print("Must specify group with -g")
-		sys.exit(-1)
+	# if args.group == "":
+	# 	print("Must specify group with -g")
+	# 	sys.exit(-1)
 
 	# Check arguments for logging
 	loggingLevel = logging.DEBUG
@@ -231,5 +247,12 @@ def exit_handler():
 	os.system("pkill -9 tshark")
 
 if __name__ == "__main__":
+
+	node_number = Value('i', 0)
+
+	p = Process(target=get_node_and_mac, args=(node_number,))
+	p.start()
+	p.join()
+
 	atexit.register(exit_handler)
-	main()
+	main(node_number)
