@@ -28,9 +28,6 @@ url = 'http://192.168.1.8:3000'
 def get_node_and_mac(num):
 
 	# TEMP
-	# r1 = requests.get('http://192.168.1.8:3000/reset')
-	# r2 = requests.get('http://192.168.1.8:3000/fake')
-	# r3 = requests.get('http://192.168.1.8:3000/fake')
 
 	payload = {'mac': own_mac}
 	route = url + '/init'
