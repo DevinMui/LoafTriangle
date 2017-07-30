@@ -25,7 +25,7 @@ def get_node_and_mac():
 	payload = {'mac': own_mac}
 	route = url + '/init'
 	r = requests.post(route, data=payload)
-	return r.json()['length']
+	return r.json()['length'] - 1
 
 def restart_wifi():
 	os.system("/sbin/ifdown --force wlan0")
@@ -48,18 +48,15 @@ def num_wifi_cards():
 
 
 def process_scan(time_window, own_node):
-	global found_nodes
 
-	other_nodes = []
-	print found_nodes
-	if found_nodes == False:
-		route = url + '/init'
-		r = requests.get(route)
-		if len(r.json()) != 3:
-			return
-		else:
-			for node in r.json():
-				other_nodes.append(node)
+	payload = None
+
+	route = url + '/nodes'
+	r = requests.get(route)
+	if len(r.json()) < 3:
+		return payload
+
+	print r.json()
 
 	logger.debug("Reading files...")
 	output = ""
@@ -82,9 +79,9 @@ def process_scan(time_window, own_node):
 	for line in output.splitlines():
 		try:
 			timestamp, mac, mac2, power_levels = line.split("\t")
-			print mac
+			# print mac
 			if mac == mac2 or float(timestamp) < timestamp_threshold or len(mac) == 0:
-				print float(timestamp) < timestamp_threshold
+				# print float(timestamp) < timestamp_threshold
 				continue
 			
 			relevant_lines+=1
@@ -112,7 +109,7 @@ def process_scan(time_window, own_node):
 		else:
 			if str(mac) != "f0:d7:aa:7e:f9:0c":
 				continue
-		print mac
+		# print mac
 		fingerprints2.append(
 			{"mac": mac, "rssi": int(statistics.median(fingerprints[mac]))})
 
@@ -120,24 +117,31 @@ def process_scan(time_window, own_node):
 				 (len(output.splitlines()), len(fingerprints2),relevant_lines))
 
 	if len(fingerprints2) == 0:
-		return
+		return payload
 	else:
 		payload = {
 			'mac': fingerprints2[0]['mac'],
 			'rssi': fingerprints2[0]['rssi']
+
 		}
 		logger.debug(payload)
 		# return payload
-		return
+		return payload
 
 def init(time_window, own_node, args):
 	other_nodes = []
-	payload = None
 	while(True):
+		other_nodes = []
 		route = url + '/init'
 		r = requests.get(route)
 		for node in r.json():
 			other_nodes.append(node)
+		if len(other_nodes) > 2:
+			break
+
+	fingerprints2 = []
+	payload = None
+	while(True):
 
 		logger.debug("Reading files...")
 		output = ""
@@ -161,8 +165,8 @@ def init(time_window, own_node, args):
 			try:
 				timestamp, mac, mac2, power_levels = line.split("\t")
 				if mac == mac2 or float(timestamp) < timestamp_threshold or len(mac) == 0:
-					print mac
-					print float(timestamp) < timestamp_threshold
+					# print mac
+					# print float(timestamp) < timestamp_threshold
 					continue
 				
 				relevant_lines+=1
@@ -178,26 +182,25 @@ def init(time_window, own_node, args):
 				pass
 		logger.debug("..done")
 
-		# Compute medians
-		fingerprints2 = []
-
-		print fingerprints
+		# print fingerprints
 
 		for mac in fingerprints:
 			if len(fingerprints[mac]) == 0:
 				continue
 			if str(mac) == own_mac:
-				print 'WOW YOU VIOLATED THE LAW'
+				# print 'WOW YOU VIOLATED THE LAW'
 				continue
 			else:
 				for node in other_nodes:
-					if mac != node['mac']:
+					if mac == node['mac']:
+						other_nodes.remove(node)
+						fingerprints2.append(
+						{
+							"rssi": int(statistics.median(fingerprints[mac])),
+							"mac": mac
+						})
+					else:
 						continue
-			fingerprints2.append(
-				{
-					"rssi": int(statistics.median(fingerprints[mac])),
-					"mac": mac
-				})
 
 		logger.debug("Processed %d lines, found %d fingerprints in %d relevant lines" %
 					 (len(output.splitlines()), len(fingerprints2),relevant_lines))
@@ -209,11 +212,11 @@ def init(time_window, own_node, args):
 				"rssis": fingerprints2
 			}
 
-		if len(r.json()) != 3 and payload:
+		if len(r.json()) == 3 and payload:
 			break
 		time.sleep(float(time_window))
 		
-	print payload
+	# print payload
 	r = requests.post(
 		args.server +
 		"/",
@@ -322,7 +325,7 @@ def main(node_num):
 	logger.addHandler(ch)
 
 	# Startup scanning
-	print("Using server " + args.server)
+	# print("Using server " + args.server)
 	logger.debug("Using server " + args.server)
 	start_scan(args.interface)
 	init(args.time, node_num, args) # initialization with loaf server
