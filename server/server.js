@@ -1,17 +1,29 @@
 let express = require('express');
 let bodyParser = require('body-parser');
+let logger = require('morgan');
+var pretty = require('express-prettify');
 let app = express();
+
+app.use(pretty({ query: 'pretty' }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-
+app.use(logger('dev'));
 
 let initNodes = [];
 let nodes = [];
 let nodeTrilateration = [];
 
+app.get('/', function(req,res){
+	res.json({success: true, message: 'welcome to experiment: "Finding the location of a WiFi-enabled device through Raspberry Pi Trilateration"'});
+});
+
+app.get('/nodes',function(req,res){
+	res.json(nodes);
+});
+
 app.post('/', function(req, res){
 	nodes.push({
-		node: nodes.length-1,
+		node: req.body.node,
 		mac: req.body.mac,
 		x: null,
 		y: null,
@@ -22,8 +34,12 @@ app.post('/', function(req, res){
 			res.json(datas);
 		});
 	} else {
-		res.json(nodes)
+		res.json(nodes);
 	}
+});
+
+app.get('/trilateration', function(req,res){
+	res.json(nodeTrilateration);
 });
 
 app.post('/trilateration', function(req,res){
@@ -40,9 +56,37 @@ app.post('/trilateration', function(req,res){
 	res.json(nodeTrilateration);
 });
 
-app.post('/track', function(req,res){
+app.get('/track', function(req,res){
 	// need to get distance
-	return getTrilateration(nodes[0], nodes[1], nodes[2]);
+	let json = { 
+		android: getTrilateration(nodeTrilateration[0], nodeTrilateration[1], nodeTrilateration[2]), 
+		node0: { 
+			distance: calculateDistance(nodeTrilateration[0].rssi),
+			mac: nodeTrilateration[0].mac
+		},
+		node1: { 
+			distance: calculateDistance(nodeTrilateration[1].rssi),
+			mac: nodeTrilateration[1].mac
+		},
+		node2: {
+			distance: calculateDistance(nodeTrilateration[2].rssi),
+			mac: nodeTrilateration[2].mac
+		}
+	};
+	res.json(json);
+});
+
+app.get('/init', function(req,res){
+	res.json(initNodes);
+	// res.json({length: initNodes.length});
+});
+
+app.get('/fake', function(req,res){
+	initNodes.push({
+		node: initNodes.length,
+		mac: 'ff:ff:ff:ff:ff:ff'
+	});
+	res.json(initNodes);
 });
 
 app.post('/init', function(req,res){
@@ -53,13 +97,10 @@ app.post('/init', function(req,res){
 	res.json({length: initNodes.length});
 });
 
-app.get('/macs', function(req,res){
-	res.json(initNodes);
-});
-
 app.get('/reset', function(req,res){
 	initNodes = [];
 	nodes = [];
+	nodeTrilateration = [];
 	res.json({'success': true, message: 'resetted'});
 });
 
