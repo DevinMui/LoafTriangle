@@ -2,31 +2,85 @@
 <html>
 <head>
 	<title>Experiment #1: LOAF TRIANGULATION</title>
-	<!-- <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/agate.min.css"> -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/zenburn.min.css">
+	<link href="https://fonts.googleapis.com/css?family=Roboto:300,400" rel="stylesheet">
 	<link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-	<h1>LOAF TRIANGULATION</h1>
-	<button onclick="reset()">Reset</button>
-	<button onclick="trilateration()">Trilateration</button>
-	<button onclick="init()">Init</button>
-	<button onclick="clear()">Clear screen</button>
-	<pre><code class="json">{ message: "no action selected" }</code></pre>
+	<div class="container">
+		<h1 style="font-weight: 300">LOAF TRIANGULATION</h1>
+		<div style="margin-bottom: 20px">
+			<button type="button" class="btn btn-danger" onclick="reset()"><i class="glyphicon glyphicon-trash"></i></button>
+			<button type="button" class="btn btn-info" onclick="trilateration()">Trilateration</button>
+			<button type="button" class="btn btn-info" onclick="init()">Init</button>
+			<button type="button" class="btn btn-info" onclick="node()">/ Nodes</button>
+			<button type="button" class="btn btn-info" onclick="fake()">Fake</button>
+			<button type="button" class="btn btn-info" onclick="calc()">Calculate</button>
+			<button type="button" class="btn btn-info" onclick="clearScreen()"><i class="glyphicon glyphicon-home"></i></button>
+		</div>
+		<pre style="padding: 0"><code class="json">{ message: "no action selected" }</code></pre>
+	</div>
 	<script src="http://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 	<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
 	<script type="text/javascript">
 		hljs.initHighlightingOnLoad();
-		function clear(){
-			$('code').text('');
+		function clearScreen(){
+			$('code').text('{ message: "screen cleared" }');
+			$('pre code').each(function(i, block){
+				hljs.highlightBlock(block);
+			});
 		}
 
 		function reset(){
 			$.ajax({
-				url: "/reset"
+				url: '/reset'
 			})
 			.done(function(data){
-				$('code').text(JSON.stringify(data, null, 4))
+				$('code').text(JSON.stringify(data, null, 4));
+				$('pre code').each(function(i, block){
+					hljs.highlightBlock(block);
+				});
+			});
+		}
+
+		function fake(){
+			$.ajax({
+				url: '/fake'
+			})
+			.done(function(data){
+				$('code').text(JSON.stringify(data, null, 4));
+				$('pre code').each(function(i, block){
+					hljs.highlightBlock(block);
+				});
+			});
+		}
+
+		function calc(){
+			$.ajax({
+				url: '/calculate'
+			})
+			.done(function(data){
+				$('code').text(JSON.stringify(data, null, 4));
+				$('pre code').each(function(i, block){
+					hljs.highlightBlock(block);
+				});
+			})
+			.error(function(error){
+				$('code').text(error);
+				$('pre code').each(function(i, block){
+					hljs.highlightBlock(block);
+				});
+			});
+		}
+
+		function node(){
+			$.ajax({
+				url: '/nodes',
+			})
+			.done(function(data){
+				$('code').text(JSON.stringify(data, null, 4));
 				$('pre code').each(function(i, block){
 					hljs.highlightBlock(block);
 				});
@@ -35,7 +89,7 @@
 
 		function trilateration(){
 			$.ajax({
-				url: "/trilateration",
+				url: '/trilateration',
 			})
 			.done(function(data){
 				$('code').text(JSON.stringify(data, null, 4));
@@ -56,6 +110,31 @@
 				});
 			});
 		}
+
+		function calculateDistance(rssi,txPower){
+			var n = 2;
+			var d = 10 ** ((txPower - rssi) / (10*n));
+			return Math.pow(10*d, (txPower - rssi) / (10 * 2));
+			// if(!txPower){
+			// 	txPower = -59;
+			// }
+			// // var txPower = -59; //hard coded power value. Usually ranges between -59 to -65
+			// if (rssi === 0) {
+			// 	return -1.0; 
+			// }
+			// var ratio = rssi*1.0/txPower;
+			// if (ratio < 1.0) {
+			// 	return Math.pow(ratio,10);
+			// } else {
+			// 	var distance =  (0.89976)*Math.pow(ratio,7.7095) + 0.111;    
+			// 	return distance;
+			// }
+		}
+
+		function convertToFeet(meters){
+			return meters*3.28084
+		}
+
 	</script>
 </body>
 </html>

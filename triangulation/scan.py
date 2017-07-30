@@ -33,7 +33,7 @@ def restart_wifi():
 	os.system("iwconfig wlan0 mode managed")
 	while True:
 		ping_response = subprocess.Popen(
-			["/bin/ping", "-c1", "-w100", "lf.internalpositioning.com"], stdout=subprocess.PIPE).stdout.read()
+			["/bin/ping", "-c1", "-w100", url], stdout=subprocess.PIPE).stdout.read()
 		if '64 bytes' in ping_response.decode('utf-8'):
 			break
 		time.sleep(1)
