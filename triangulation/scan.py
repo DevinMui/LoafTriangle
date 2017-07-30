@@ -26,9 +26,6 @@ url = 'http://192.168.1.8:3000'
 
 
 def get_node_and_mac(num):
-
-	# TEMP
-
 	payload = {'mac': own_mac}
 	route = url + '/init'
 	r = requests.post(route, data=payload)
