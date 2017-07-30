@@ -9,8 +9,8 @@ import argparse
 import logging
 import statistics
 import atexit
-import uuid
 from multiprocessing import Process, Value, Manager
+from uuid import getnode as get_mac
 logger = logging.getLogger('scan.py')
 
 import requests
@@ -19,9 +19,11 @@ import requests
 # 	found_nodes = False
 
 found_nodes = False
-mac_num = hex(uuid.getnode()).replace('0x', '').upper()
-before_mac = '-'.join(mac_num[i : i + 2] for i in range(0, 11, 2))
-own_mac = before_mac.lower()
+omac = get_mac()
+owmac = ':'.join(("%012X" % omac)[i:i+2] for i in range(0, 12, 2))
+own_mac = owmac.lower()
+
+# print own_mac
 
 url = 'http://192.168.1.8:3000'
 
@@ -105,28 +107,29 @@ def process_scan(time_window, own_node):
 	logger.debug("..done")
 
 	# Compute medians
-	fingerprints3 = []
+	# fingerprints3 = []
 	fingerprints2 = []
+
 	for mac in fingerprints:
-		print mac
+		# print mac
 		if len(fingerprints[mac]) == 0:
 			continue
 		if str(mac) == own_mac:
 			print 'WOW YOU VIOLATED THE LAW'
 			continue
-		if found_nodes == False:
-			for node in other_nodes:
-				if mac != node['mac']:
-					# print node['mac']
-					continue
-		if str(mac) != "f0:d7:aa:7e:f9:0c":
-			continue
-		# print(mac)
-		# print(fingerprints[mac])
+		# if found_nodes == False:
+		# 	for node in other_nodes:
+		# 		if mac != node['mac']:
+		# 			# print node['mac']
+		# 			continue
+		else:
+			if str(mac) != "f0:d7:aa:7e:f9:0c":
+				continue
+		print mac
 		fingerprints2.append(
 			{"mac": mac, "rssi": int(statistics.median(fingerprints[mac]))})
-		fingerprints3.append(
-			{'rssi': int(statistics.median(fingerprints[mac]))})
+		# fingerprints3.append(
+		# 	{'rssi': int(statistics.median(fingerprints[mac]))})
 
 	logger.debug("Processed %d lines, found %d fingerprints in %d relevant lines" %
 				 (len(output.splitlines()), len(fingerprints2),relevant_lines))
@@ -134,16 +137,16 @@ def process_scan(time_window, own_node):
 	# payload = {
 	# 	'rssis': fingerprints2}
 	# print phone_mac
-	if found_nodes == False:
-		if len(fingerprints3) == 2:
-			payload = {
-				'node': own_node,
-				'mac': own_mac,
-				'rssis': fingerprints3
-			}
-			print payload
-			return payload
-	elif len(fingerprints2) == 0:
+	# if found_nodes == False:
+	# 	if len(fingerprints3) == 2:
+	# 		payload = {
+	# 			'node': own_node,
+	# 			'mac': own_mac,
+	# 			'rssis': fingerprints3
+	# 		}
+	# 		# print payload
+	# 		return payload
+	if len(fingerprints2) == 0:
 		return
 	else:
 		payload = {
@@ -153,6 +156,92 @@ def process_scan(time_window, own_node):
 		logger.debug(payload)
 		return payload
 
+def init(time_window, own_node):
+	other_nodes = []
+	payload = None
+	while(True):
+		route = url + '/init'
+		r = requests.get(route)
+		for node in r.json():
+			other_nodes.append(node)
+
+		logger.debug("Reading files...")
+		output = ""
+		maxFileNumber = -1
+		fileNameToRead = ""
+		for filename in glob.glob("/tmp/tshark-temp*"):
+			fileNumber = int(filename.split("_")[1])
+			if fileNumber > maxFileNumber:
+				maxFileNumber = fileNumber
+				fileNameToRead = filename
+
+		logger.debug("Reading from %s" % fileNameToRead)
+		cmd = subprocess.Popen(("tshark -r "+fileNameToRead+" -T fields -e frame.time_epoch -e wlan.sa -e wlan.bssid -e radiotap.dbm_antsignal").split(
+		), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		output += cmd.stdout.read().decode('utf-8')
+
+		timestamp_threshold = float(time.time()) - float(time_window)
+		fingerprints = {}
+		relevant_lines = 0
+		for line in output.splitlines():
+			try:
+				timestamp, mac, mac2, power_levels = line.split("\t")
+
+				if mac == mac2 or float(timestamp) < timestamp_threshold or len(mac) == 0:
+					continue
+				
+				relevant_lines+=1
+				rssi = power_levels.split(',')[0]
+				if len(rssi) == 0:
+					continue
+
+				if mac not in fingerprints:
+					fingerprints[mac] = []
+				fingerprints[mac].append(float(rssi))
+				# print mac
+			except:
+				pass
+		logger.debug("..done")
+
+		# Compute medians
+		fingerprints2 = []
+
+		for mac in fingerprints:
+			# print mac
+			if len(fingerprints[mac]) == 0:
+				continue
+			if str(mac) == own_mac:
+				print 'WOW YOU VIOLATED THE LAW'
+				continue
+			else:
+				for node in other_nodes:
+					if mac != node['mac']:
+						continue
+			print mac
+			fingerprints2.append(
+				{"rssi": int(statistics.median(fingerprints[mac]))})
+
+		logger.debug("Processed %d lines, found %d fingerprints in %d relevant lines" %
+					 (len(output.splitlines()), len(fingerprints2),relevant_lines))
+
+		if len(fingerprints2) == 2:
+			payload = {
+				'node': own_node,
+				'mac': own_mac,
+				'rssis': fingerprints2
+			}
+
+		if len(r.json()) != 3 and payload:
+			break
+		
+
+	r = requests.post(
+		args.server +
+		"/",
+		json=payload)
+		
+	logger.debug(
+		"Sent to server with status code: " + str(r.status_code))	
 
 def run_command(command):
 	p = subprocess.Popen(
@@ -263,7 +352,7 @@ def main(node_num):
 	logger.debug("Using server " + args.server)
 	print("Using group " + args.group)
 	logger.debug("Using group " + args.group)
-
+	init(args.time, node_num) # initialization with loaf server
 	while True:
 		try:
 			if args.single_wifi:
@@ -276,23 +365,12 @@ def main(node_num):
 			payload = process_scan(args.time, node_num)
 			# payload['group'] = args.group
 			if payload != None:
-				if found_nodes == True:
-					print found_nodes
-					r = requests.post(
-						args.server +
-						"/trilateration",
-						json=payload)
-					logger.debug(
-						"Sent to server with status code: " + str(r.status_code))
-				else:
-					print payload
-					r = requests.post(
-							args.server +
-							"/",
-							json=payload)
-					logger.debug(
-							"Sent to server with status code: " + str(r.status_code))
-					found_nodes = True
+				r = requests.post(
+					args.server +
+					"/trilateration",
+					json=payload)
+				logger.debug(
+					"Sent to server with status code: " + str(r.status_code))
 			time.sleep(float(args.time))  # Wait before getting next window
 		except Exception:
 			logger.error("Fatal error in main loop", exc_info=True)
@@ -300,7 +378,7 @@ def main(node_num):
 
 
 def exit_handler():
-	print("Exiting...stopping scan..")
+	# print("Exiting...stopping scan..")
 	os.system("pkill -9 tshark")
 
 if __name__ == "__main__":
