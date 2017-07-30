@@ -38,6 +38,26 @@ $ python3 cluster.py initialize
 
 Visit `http://localhost:3000/track` to look at the JSON response (distance is returned in meters)
 
+#### Example response
+
+```json
+{ 
+	"android": getTrilateration(nodeTrilateration[0], nodeTrilateration[1], nodeTrilateration[2]), 
+	"node0": { 
+		"distance": calculateDistance(nodeTrilateration[0].rssi),
+		"mac": nodeTrilateration[0].mac
+	},
+	"node1": { 
+		"distance": calculateDistance(nodeTrilateration[1].rssi),
+		"mac": nodeTrilateration[1].mac
+	},
+	"node2": {
+		"distance": calculateDistance(nodeTrilateration[2].rssi),
+		"mac": nodeTrilateration[2].mac
+	}
+}
+```
+
 To stop the Raspberry Pi servers
 
 ```bash
