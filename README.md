@@ -42,20 +42,23 @@ Visit `http://localhost:3000/track` to look at the JSON response (distance is re
 #### Example response
 
 ```json
-{ 
-	"android": getTrilateration(nodeTrilateration[0], nodeTrilateration[1], nodeTrilateration[2]), 
-	"node0": { 
-		"distance": calculateDistance(nodeTrilateration[0].rssi),
-		"mac": nodeTrilateration[0].mac
-	},
-	"node1": { 
-		"distance": calculateDistance(nodeTrilateration[1].rssi),
-		"mac": nodeTrilateration[1].mac
-	},
-	"node2": {
-		"distance": calculateDistance(nodeTrilateration[2].rssi),
-		"mac": nodeTrilateration[2].mac
-	}
+{
+    "android": {
+        "x": 2.150814795347777,
+        "y": 1.1330543893206393
+    },
+    "node0": {
+        "distance": 0.5011872336272722,
+        "mac": "b8:27:eb:ec:77:38"
+    },
+    "node1": {
+        "distance": 0.6309573444801932,
+        "mac": "b8:27:eb:c5:51:a0"
+    },
+    "node2": {
+        "distance": 0.31622776601683794,
+        "mac": "b8:27:eb:6f:af:5f"
+    }
 }
 ```
 
