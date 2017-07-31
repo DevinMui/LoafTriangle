@@ -60,7 +60,10 @@ def process_scan(time_window, own_node):
 		return payload
 
 	for node in r.json():
-		if node['node'] == own_node:
+		print node
+		print node['node']
+		print own_node
+		if node['mac'] == own_mac:
 			node_x = node['x']
 			node_y = node['y']
 			
@@ -127,7 +130,7 @@ def process_scan(time_window, own_node):
 		return payload
 	else:
 		payload = {
-			'mac': fingerprints2[0]['mac'],
+			'mac': own_mac,
 			'rssi': fingerprints2[0]['rssi'],
 			'x': node_x,
 			'y': node_y
@@ -220,7 +223,7 @@ def init(time_window, own_node, args):
 				"rssis": fingerprints2
 			}
 
-		if len(r.json()) == 3 and payload:
+		if payload:
 			break
 		time.sleep(float(time_window))
 		
@@ -336,7 +339,7 @@ def main(node_num):
 	# print("Using server " + args.server)
 	logger.debug("Using server " + args.server)
 	start_scan(args.interface)
-	init(args.time, node_num, args) # initialization with loaf server
+	# init(args.time, node_num, args) # initialization with loaf server
 	while True:
 		try:
 			# if args.single_wifi:
