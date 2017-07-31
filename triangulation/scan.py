@@ -60,7 +60,7 @@ def process_scan(time_window, own_node):
 		return payload
 
 	for node in r.json():
-		if node['node'] == own_node
+		if node['node'] == own_node:
 			node_x = node['x']
 			node_y = node['y']
 			
@@ -127,7 +127,6 @@ def process_scan(time_window, own_node):
 	if len(fingerprints2) == 0:
 		return payload
 	else:
-		r.json()[]
 		payload = {
 			'mac': fingerprints2[0]['mac'],
 			'rssi': fingerprints2[0]['rssi'],
