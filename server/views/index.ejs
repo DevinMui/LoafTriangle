@@ -17,6 +17,7 @@
 			<button type="button" class="btn btn-info" onclick="node()">/ Nodes</button>
 			<button type="button" class="btn btn-info" onclick="fake()">Fake</button>
 			<button type="button" class="btn btn-info" onclick="calc()">Calculate</button>
+			<button type="button" class="btn btn-info" onclick="track()">Track</button>
 			<button type="button" class="btn btn-info" onclick="clearScreen()"><i class="glyphicon glyphicon-home"></i></button>
 		</div>
 		<pre style="padding: 0"><code class="json">{ message: "no action selected" }</code></pre>
@@ -36,6 +37,18 @@
 		function reset(){
 			$.ajax({
 				url: '/reset'
+			})
+			.done(function(data){
+				$('code').text(JSON.stringify(data, null, 4));
+				$('pre code').each(function(i, block){
+					hljs.highlightBlock(block);
+				});
+			});
+		}
+
+		function track(){
+			$.ajax({
+				url: '/track'
 			})
 			.done(function(data){
 				$('code').text(JSON.stringify(data, null, 4));

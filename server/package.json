@@ -13,6 +13,7 @@
     "ejs": "^2.5.7",
     "express": "^4.15.3",
     "express-prettify": "0.0.8",
+    "kalmanjs": "^1.0.0-beta",
     "morgan": "^1.8.2"
   }
 }
