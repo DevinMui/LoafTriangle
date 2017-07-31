@@ -51,11 +51,19 @@ def process_scan(time_window, own_node):
 
 	payload = None
 
+	node_x = None
+	node_y = None
+
 	route = url + '/nodes'
 	r = requests.get(route)
 	if len(r.json()) < 3:
 		return payload
 
+	for node in r.json():
+		if node['node'] == own_node:
+			node_x = node['x']
+			node_y = node['y']
+			
 	print r.json()
 
 	logger.debug("Reading files...")
@@ -79,7 +87,6 @@ def process_scan(time_window, own_node):
 	for line in output.splitlines():
 		try:
 			timestamp, mac, mac2, power_levels = line.split("\t")
-			# print mac
 			if mac == mac2 or float(timestamp) < timestamp_threshold or len(mac) == 0:
 				# print float(timestamp) < timestamp_threshold
 				continue
@@ -121,8 +128,9 @@ def process_scan(time_window, own_node):
 	else:
 		payload = {
 			'mac': fingerprints2[0]['mac'],
-			'rssi': fingerprints2[0]['rssi']
-
+			'rssi': fingerprints2[0]['rssi'],
+			'x': node_x,
+			'y': node_y
 		}
 		logger.debug(payload)
 		# return payload
