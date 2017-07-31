@@ -4,6 +4,8 @@ let ejs = require('ejs');
 let bodyParser = require('body-parser');
 let logger = require('morgan');
 let pretty = require('express-prettify');
+// TODO: Change everything to be more ES6
+let KalmanFilter = require('kalmanjs');
 let app = express();
 
 app.use(pretty({ query: 'pretty' }));
@@ -18,6 +20,19 @@ app.set('view engine', 'ejs');
 let initNodes = [];
 let nodes = [];
 let nodeTrilateration = [];
+let calibrate = []; // a bunch of rssi values from a device at 1m away
+let txPower = 0; // txpower is also represented 
+
+app.get('/kalman', function(req,res){
+	calibrate = calcKalman(calibrate);
+	let sum = 0;
+	for(data of calibrate){
+		sum+=data;
+	}
+	avg = sum/data.length;
+	txPower = avg;
+	res.json({txPower: txPower})
+});
 
 app.get('/', function(req,res){
 	// res.json({success: true, message: 'welcome to experiment: "Finding the location of a WiFi-enabled device through Raspberry Pi Trilateration"'});
@@ -165,7 +180,15 @@ app.get('/reset', function(req,res){
 	res.json({'success': true, message: 'resetted'});
 });
 
-function calcPos(datas){	
+function calcKalman(data){
+	let kalmanFilter = new KalmanFilter({R: 0.01, Q: 3});
+	let data = data.map(function(v){
+		return kalmanFilter.filter(v);
+	});
+	return data;
+}
+
+function calcPos(datas){
 	datas[0].x = 0;
 	datas[0].y = 0;
 	let rssis = datas[1].rssis;
@@ -206,6 +229,7 @@ function calcPos(datas){
 	for(rssi of rssis){
 		rssi.distance = convertToFeet(calculateDistance(rssi.rssi));
 	}
+	// law of cosines
 	let c = Math.acos( (k1**2+k2**2-k3**2) / (2*k1*k2) );
 	datas[2].x = k1*Math.sin(c);
 	datas[2].y = k1*Math.cos(c);
@@ -240,30 +264,11 @@ function convertToFeet(meters){
 	return meters*3.28084
 }
 
-// https://gist.github.com/eklimcz/446b56c0cb9cfe61d575
-// rssi->meters
-function calculateDistance(rssi){
-	var txPower = -49; //hard coded power value. Usually ranges between -59 to -65
-	if (rssi === 0) {
-		return -1.0; 
-	}
-	var ratio = rssi*1.0/txPower;
-	if (ratio < 1.0) {
-		return Math.pow(ratio,10);
-	} else {
-		var distance =  (0.89976)*Math.pow(ratio,7.7095) + 0.111;    
-		return distance;
-	}
+function calculateDistance(rssi,a0=txPower){
+	let n = 2; // for indoor purposes, n = 2 should suffice
+	let d = 10 ** ((a0 - rssi) / (10*n));
+	return d;
 }
-
-// function calculateDistance(rssi,txPower){
-// 	if(!txPower){
-// 		txPower = -65;
-// 	}
-// 	var n = 2;
-// 	var d = 10 ** ((txPower - rssi) / (10*n));
-// 	return Math.pow(10*d, (txPower - rssi) / (10 * 2));	
-// }
 
 app.listen(3000, "0.0.0.0", function(){
 	console.log('Running on port 3000');
