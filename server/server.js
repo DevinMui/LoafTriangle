@@ -110,57 +110,65 @@ app.get('/init', function(req,res){
 	// res.json({length: initNodes.length});
 });
 
+// positions of the rpis
+// unable to get position automatically yet/need to smoothen rssi values
 app.get('/fake', function(req,res){
 	let test = [
 	    {
 	        "node": 1,
 	        "mac": "b8:27:eb:c5:51:a0",
-	        "x": null,
-	        "y": null,
+	        "x": 0,
+	        "y": 0,
 	        "rssis": [
 	            {
-	                "rssi": -49,
-	                "mac": "b8:27:eb:ec:77:38"
-	            },
-	            {
-	                "rssi": -58,
-	                "mac": "b8:27:eb:6f:af:5f"
-	            }
-	        ]
-	    },
-	    {
-	        "node": 2,
-	        "mac": "b8:27:eb:6f:af:5f",
-	        "x": null,
-	        "y": null,
-	        "rssis": [
-	            {
-	                "rssi": -55,
-	                "mac": "b8:27:eb:c5:51:a0"
+	                "rssi": -51,
+	                "mac": "b8:27:eb:ec:77:38",
+	                "distance": 4.1303328480307755
 	            },
 	            {
 	                "rssi": -48,
-	                "mac": "b8:27:eb:ec:77:38"
+	                "mac": "b8:27:eb:6f:af:5f",
+	                "distance": 2.924051727866718
 	            }
 	        ]
 	    },
 	    {
 	        "node": 0,
 	        "mac": "b8:27:eb:ec:77:38",
-	        "x": null,
-	        "y": null,
+	        "x": 4.26719986344960,
+	        "y": 0,
 	        "rssis": [
 	            {
 	                "rssi": -56,
-	                "mac": "b8:27:eb:6f:af:5f"
+	                "mac": "b8:27:eb:6f:af:5f",
+	                "distance": 7.3448858602605505
 	            },
 	            {
-	                "rssi": -61,
-	                "mac": "b8:27:eb:c5:51:a0"
+	                "rssi": -63,
+	                "mac": "b8:27:eb:c5:51:a0",
+	                "distance": 16.443151235736998
 	            }
 	        ]
-    	}
-    ];
+	    },
+	    {
+	        "node": 2,
+	        "mac": "b8:27:eb:6f:af:5f",
+	        "x": 0.17009418013466,
+	        "y": 2.43246010231483,
+	        "rssis": [
+	            {
+	                "rssi": -51,
+	                "mac": "b8:27:eb:ec:77:38",
+	                "distance": 4.1303328480307755
+	            },
+	            {
+	                "rssi": -58,
+	                "mac": "b8:27:eb:c5:51:a0",
+	                "distance": 9.24666345620967
+	            }
+	        ]
+	    }
+	];
     nodes = test;
 	res.json(test);
 });
@@ -265,6 +273,7 @@ function convertToFeet(meters){
 }
 
 function calculateDistance(rssi,a0=txPower){
+	a0 = -49;
 	let n = 2; // for indoor purposes, n = 2 should suffice
 	let d = 10 ** ((a0 - rssi) / (10*n));
 	return d;
