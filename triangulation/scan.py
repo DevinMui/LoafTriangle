@@ -87,7 +87,6 @@ def process_scan(time_window, own_node):
 	for line in output.splitlines():
 		try:
 			timestamp, mac, mac2, power_levels = line.split("\t")
-			# print mac
 			if mac == mac2 or float(timestamp) < timestamp_threshold or len(mac) == 0:
 				# print float(timestamp) < timestamp_threshold
 				continue
