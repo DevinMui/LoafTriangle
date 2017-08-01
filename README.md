@@ -45,7 +45,7 @@ Visit `http://localhost:3000/track` to look at the JSON response (distance is re
 ```json
 {
     "android": {
-        "x": 2.150814795347777, // this is in meters
+        "x": 2.150814795347777,
         "y": 1.1330543893206393
     },
     "node0": {
