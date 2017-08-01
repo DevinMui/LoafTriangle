@@ -73,7 +73,7 @@ $ python 3 cluster.py stop
 
 Calculating position:
 
-[![The Law of Cosines](lawOfCosines.gif)](lawOfCosines.gif)
+[![The Law of Cosines](lawofCosines.gif)](lawofCosines.gif)
 
 Converting RSSI to meters:
 
