@@ -7,6 +7,7 @@
 * [Abstract](#abstract)
 * [Dependencies](#dependencies)
 * [Setup](#setup)
+* [Math](#math)
 * [Results](#results)
 * [Usage](#usage)
 * [Contributing](#Contributing)
@@ -44,7 +45,7 @@ Visit `http://localhost:3000/track` to look at the JSON response (distance is re
 ```json
 {
     "android": {
-        "x": 2.150814795347777,
+        "x": 2.150814795347777, // this is in meters
         "y": 1.1330543893206393
     },
     "node0": {
@@ -68,9 +69,37 @@ To stop the Raspberry Pi servers
 $ python 3 cluster.py stop
 ```
 
+### Math
+
+Calculating position:
+
+[![The Law of Cosines](lawOfCosines.gif)](lawOfCosines.gif)
+
+Converting RSSI to meters:
+
+[![Log Distance Pathloss Model](logDistancePathlossModel.gif)](logDistancePathlossModel.gif)
+
 ### Results
 
-TBD
+#### Calculating position (7/31/2017)
+
+Unfortunately, the RSSI values were all over the place when calculating the position of the RPis. This could have been the result of WiFi signals being reflected or other signal noises causing a change in the RSSI value. The values resulted in a drastic accuracy drop for trilaterating device positions as the RPi positions were incredibly inaccurate. This was fixed in the device position test by manually recording distances between the devices and using basic trigonometry (law of cosines) to find the positions of the RPis. Before the fix, we had an accuracy of roughly +/-8m and where each RPi's position had an accuracy of +/-3m. After the fix, we had an accuracy of +/-3m. In the future, we plan to utilize filters to smoothen the RSSI data to increase the device position accuracy.
+
+#### Calculating device position (7/31/2017)
+
+Calculating the device's position involved trilateration to find the device's position. In a few tests, we determined the accuracy of this system to be +/-3m with no obstructions. With obstructions, the perceived position fluctuated with the best accuracy being +/-2m and the worst result being +/-6m. In the tests, the device was positioned on top of a table with a position of about (2m, 4m). In a few tests, the device was partially obstructed by chairs. In other tests, the device was not obstructed at all. 
+
+##### Error Analysis
+
+We did not have a tape measure with meters so we had to estimate the conversion of meters to feet. We used the formula:
+
+`meters = feet * 3`
+
+to estimate meters. A more accurate measurement would have been:
+
+`meters = feet * 3.28084`
+
+Using this formula in our video would have most likely increased our accuracy by half a meter or more. Further improvements would be to implement Kalman filtering to remove noise from RSSI signals and provide a better a0 for RSSI to meter conversion algorithm with the Log-Distance Pathloss model. Other improvements we would need is to implement a way to remove noise from obstructions.
 
 ### Usages
 
