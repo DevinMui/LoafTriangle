@@ -408,7 +408,7 @@ def main(node_num):
 	# print("Using server " + args.server)
 	logger.debug("Using server " + args.server)
 	start_scan(args.interface)
-	# init(args.time, node_num, args) # initialization with loaf server
+	init(args.time, node_num, args) # initialization with loaf server
 	while True:
 		try:
 			# if args.single_wifi:
