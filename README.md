@@ -122,7 +122,7 @@ Using this formula in our video would have most likely increased our accuracy by
 ```
 The MIT License
 
-Copyright (c) 2010-2017 Google, Inc. http://angularjs.org
+Copyright (c) 2017 Projectloaf http://projectloaf.net
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
